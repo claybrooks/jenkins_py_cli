@@ -1,0 +1,78 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Jenkins: List Jobs",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--password", "Cb052192",
+                "--list-jobs"
+            ]
+        },
+        {
+            "name": "Jenkins: Job",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--password", "Cb052192",
+                "--start-job", "HelloWorld"
+            ]
+        },
+        {
+            "name": "Jenkins: Job w/param",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--password", "Cb052192",
+                "--start-job", "HelloWorldParam",
+                "--job-param", "PARAM=HELLOWORLD"
+            ]
+        },
+        {
+            "name": "Jenkins: Job w/param/start",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--password", "Cb052192",
+                "--start-job", "HelloWorldParam",
+                "--job-param", "PARAM=HELLOWORLD",
+                "--wait-for-job-start"
+            ]
+        },
+        {
+            "name": "Jenkins: Job w/param/start/complete",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--password", "Cb052192",
+                "--start-job", "HelloWorldParam",
+                "--job-param", "PARAM=HELLOWORLD",
+                "--wait-for-job-completion",
+            ]
+        }
+    ]
+}
