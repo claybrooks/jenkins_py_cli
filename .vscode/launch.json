@@ -5,6 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Jenkins",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--password", "Cb052192"
+            ]
+        },
+        {
             "name": "Jenkins: List Jobs",
             "type": "python",
             "request": "launch",
