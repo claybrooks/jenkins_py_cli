@@ -65,14 +65,14 @@ class Job:
     ####################################################################################################################
     def update(self, check_active_builds=True):
         builds_filter = FilterList()\
-            .with_filter('builds')\
+            .begin_filter('builds')\
                 .with_lower_bound(0)\
                 .with_upper_bound(self.max_history)\
-                .add_child('building')\
-                .add_child('duration')\
-                .add_child('result')\
-                .add_child('number')\
-                .add_child('queueId')
+                .with_child('building')\
+                .with_child('duration')\
+                .with_child('result')\
+                .with_child('number')\
+                .with_child('queueId')
 
         self.from_response(self.communicator.get(self.urls.job_build_info(self.name, builds_filter)))
 

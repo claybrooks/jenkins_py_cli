@@ -99,22 +99,22 @@ class JobInstance:
             # if we do not have a build id, then we are in the queue, get info
             if not self.build_id:
                 filter = FilterList()\
-                    .add_filter('id')\
-                    .add_filter('why')\
-                    .with_filter('executable')\
-                        .add_child('number')\
-                        .add_child('url')\
+                    .with_filter('id')\
+                    .with_filter('why')\
+                    .begin_filter('executable')\
+                        .with_child('number')\
+                        .with_child('url')\
                         .end()
 
                 self.from_queue_response(self.communicator.get(self.urls.queue_item_info(self.queue_id, filters=filter)))
             # we have a build id, just query the build status
             else:
                 filter = FilterList()\
-                    .add_filter('building')\
-                    .add_filter('duration')\
-                    .add_filter('number')\
-                    .add_filter('queueId')\
-                    .add_filter('result')
+                    .with_filter('building')\
+                    .with_filter('duration')\
+                    .with_filter('number')\
+                    .with_filter('queueId')\
+                    .with_filter('result')
 
                 self.from_build_response(self.communicator.get(self.urls.build_info(self.name, self.build_id)))
         except InvalidResponse:
