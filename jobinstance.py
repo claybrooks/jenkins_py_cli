@@ -1,11 +1,13 @@
 ########################################################################################################################
 #
 ########################################################################################################################
-from jenkinsurlhelper import JenkinsTreeFilter, JenkinsTreeFilterList
-from typing import Callable
-from jenkinsexceptions import InvalidResponse, JobInstanceConstructException, JobInstanceNotBuilding
-from requests.models import Response
-from jenkinscommunicator import JenkinsCommunicator
+from logging import Filter
+from    tree.filterlist     import FilterList
+from    tree.filternode     import FilterNode
+from    typing              import Callable
+from    jenkinsexceptions   import InvalidResponse, JobInstanceConstructException, JobInstanceNotBuilding
+from    requests.models     import Response
+from    jenkinscommunicator import JenkinsCommunicator
 import  requests
 
 ########################################################################################################################
@@ -96,7 +98,7 @@ class JobInstance:
         try:
             # if we do not have a build id, then we are in the queue, get info
             if not self.build_id:
-                filter = JenkinsTreeFilterList()\
+                filter = FilterList()\
                     .add_filter('id')\
                     .add_filter('why')\
                     .with_filter('executable')\
@@ -107,11 +109,11 @@ class JobInstance:
                 self.from_queue_response(self.communicator.get(self.urls.queue_item_info(self.queue_id, filters=filter)))
             # we have a build id, just query the build status
             else:
-                filter = JenkinsTreeFilterList()\
+                filter = FilterList()\
                     .add_filter('building')\
                     .add_filter('duration')\
                     .add_filter('number')\
-                    .add_filter('queue_id')\
+                    .add_filter('queueId')\
                     .add_filter('result')
 
                 self.from_build_response(self.communicator.get(self.urls.build_info(self.name, self.build_id)))

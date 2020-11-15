@@ -1,13 +1,14 @@
 ########################################################################################################################
 #
 ########################################################################################################################
-from jenkinsurlhelper import JenkinsTreeFilter, JenkinsTreeFilterList
-from jenkinsexceptions import InvalidResponse, JobInstanceNotFound
-from jenkinsqueue import JenkinsQueue
-from    jobinstance import JobInstance
+from    tree.filterlist     import FilterList
+from    tree.filternode     import FilterNode
+from    jenkinsexceptions   import InvalidResponse, JobInstanceNotFound
+from    jenkinsqueue        import JenkinsQueue
+from    jobinstance         import JobInstance
 from    jenkinscommunicator import JenkinsCommunicator
-from    typing import Callable
-from    requests.models import Response
+from    typing              import Callable
+from    requests.models     import Response
 import  logging
 LOGGER = logging.getLogger(__file__)
 
@@ -63,8 +64,8 @@ class Job:
     #
     ####################################################################################################################
     def update(self, check_active_builds=True):
-        builds_filter = JenkinsTreeFilterList()\
-            .with_filer('builds')\
+        builds_filter = FilterList()\
+            .with_filter('builds')\
                 .with_lower_bound(0)\
                 .with_upper_bound(self.max_history)\
                 .add_child('building')\
