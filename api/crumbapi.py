@@ -1,36 +1,33 @@
 ########################################################################################################################
 #
 ########################################################################################################################
-from .filternode import FilterNode
-
+from api.hostapi            import HostAPI
+from requests.models        import Response
+from network.communicator   import Communicator
+import json
 
 ########################################################################################################################
 #
 ########################################################################################################################
-class FilterList:
+class CrumbAPI(HostAPI):
 
     ####################################################################################################################
     #
     ####################################################################################################################
-    def __init__(self):
-        self.filters:list[FilterNode] = []
+    def __init__(self, url_base:str, communicator:Communicator):
+        super().__init__(url_base=url_base, communicator=communicator)
+        self.crumb_extension = f'/crumbIssuer{self.format}'
 
     ####################################################################################################################
     #
     ####################################################################################################################
-    def __str__(self) -> str:
-        return f"{','.join([str(f) for f in self.filters])}"
+    def crumb(self) -> tuple[str,str]:
+        resp:Response = super().get(self.crumb_extension)
 
-    ####################################################################################################################
-    #
-    ####################################################################################################################
-    def begin_filter(self, name) -> FilterNode:
-        self.add_filter(name)
-        return self.filters[-1]
+        if resp.status_code != 200:
+            return (None, None)
 
-    ####################################################################################################################
-    #
-    ####################################################################################################################
-    def with_filter(self, name):
-        self.filters.append(FilterNode(name))
-        return self
+        # unpack crumb data and store
+        content = json.loads(resp.content)
+
+        return (content['crumb'], content['crumbRequestField'])

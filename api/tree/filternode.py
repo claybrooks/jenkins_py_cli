@@ -22,25 +22,35 @@ class FilterNode:
     def __str__(self) -> str:
         # if self.all is specified, then just *
         if self.all:
-            child_string = '*'
-        else:
+            child_string = "[*]"
+        elif len(self.children) > 0:
             # commad delimited list of child __str__ representations
-            child_string = ','.join(str(c) for c in self.children)
-
-        # default bound is nothing
-        bound = ''
+            child_string = f"[{','.join(str(c) for c in self.children)}]"
+        else:
+            child_string = ""
 
         # user specified both bounds
         if self.lower_bound is not None and self.upper_bound is not None:
-            bound = f'{{{self.lower_bound},{self.upper_bound}}}'
+            bound = f"{{{self.lower_bound},{self.upper_bound}}}"
         # user specified only lower bound
         elif self.lower_bound is not None:
-            bound = f'{{{self.lower_bound},}}'
+            bound = f"{{{self.lower_bound},}}"
         # user specified only upper bound
         elif self.upper_bound is not None:
-            bound = f',{{{self.upper_bound}}}'
+            bound = f",{{{self.upper_bound}}}"
+        else:
+            bound = ""
 
-        return f'{self.name}[{child_string}]{bound}'
+        return f"{self.name}{child_string}{bound}"
+
+    ####################################################################################################################
+    #
+    ####################################################################################################################
+    def __add__(self, other):
+        if not isinstance(other, FilterNode):
+            raise TypeError(f"Invalid type for FilterNode addition.  Expecting FilterNode, received {type(other)}")
+
+        return self.with_filter(other)
 
     ####################################################################################################################
     #
@@ -66,7 +76,7 @@ class FilterNode:
     ####################################################################################################################
     #
     ####################################################################################################################
-    def begin_child(self, name):
+    def begin_filter(self, name:str):
         filter = FilterNode(
             name=name,
             parent=self
@@ -77,9 +87,14 @@ class FilterNode:
     ####################################################################################################################
     #
     ####################################################################################################################
-    def with_child(self, name):
-        filter = FilterNode(name=name,parent=self).with_all()
+    def with_filter(self, obj):
+        if isinstance(obj, FilterNode):
+            filter = obj
+        else:
+            filter = FilterNode(name=obj,parent=self)
+
         self.children.append(filter)
+
         return self
 
     ####################################################################################################################

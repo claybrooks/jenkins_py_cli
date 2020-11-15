@@ -1,14 +1,13 @@
 ########################################################################################################################
 #
 ########################################################################################################################
-from    tree.filterlist     import FilterList
-from    tree.filternode     import FilterNode
-from    jenkinsexceptions   import InvalidResponse, JobInstanceNotFound
-from    jenkinsqueue        import JenkinsQueue
-from    jobinstance         import JobInstance
-from    jenkinscommunicator import JenkinsCommunicator
-from    typing              import Callable
-from    requests.models     import Response
+from    api.jenkinsapi          import JenkinsAPI
+from    api.tree.filterlist     import FilterList
+from    exceptions              import InvalidResponse
+from    jobinstance             import JobInstance
+from    typing                  import Callable
+from    requests.models         import Response
+
 import  logging
 LOGGER = logging.getLogger(__file__)
 
@@ -21,11 +20,10 @@ class Job:
     ####################################################################################################################
     #
     ####################################################################################################################
-    def __init__(self, name:str, communicator:JenkinsCommunicator, queue:JenkinsQueue, max_history=100):
-        self.communicator   = communicator
-        self.queue          = queue
+    def __init__(self, name:str, api:JenkinsAPI, max_history=100):
+
         self.name           = name
-        self.urls           = self.communicator.url_helper
+        self.api            = api
         self.max_history    = max_history
 
         self.instances:list[JobInstance] = []
@@ -33,7 +31,21 @@ class Job:
         self.build_status_listeners:dict[tuple(str, int), Callable[[int, str], None]] = {}
         self.queue_status_listeners:dict[tuple(str, int), Callable[[int, str], None]] = {}
 
-        self.update(check_active_builds=False)
+        # This is the minimal set of data for a job to instantiate builds
+        self.builds_filter = FilterList()\
+            .begin_filter('builds')\
+                .with_lower_bound(0)\
+                .with_upper_bound(self.max_history)\
+                .with_filter('number')\
+                .with_filter('queueId')\
+                .with_filter('building')\
+                .with_filter('duration')\
+                .with_filter('result')
+
+        # specify depth of 1 so we can can information about builds on a single get
+        self.depth = 0
+
+        #self.update(check_active_builds=False)
 
     ####################################################################################################################
     #
@@ -47,34 +59,35 @@ class Job:
 
         # builds we received from network
         for build in data['builds']:
-            number = build['number']
+
+            # extract the two id's we need to search
+            build_id = build['number']
             queue_id = build['queueId']
 
-            inst = self.find_instance(build_id=number, queue_id=queue_id)
+            # try to get the instances of the build
+            inst = self.find_instance(build_id=build_id, queue_id=queue_id)
+
+            # we haven't created this object yet
             if not inst:
+                # create the job instance
                 inst = JobInstance(
-                    communicator=self.communicator,
                     job_name=self.name,
-                    build_id=number
+                    build_id=build_id,
+                    queue_id=queue_id,
+                    api=self.api
                 )
+                inst.update_from_json(build)
                 self.instances.append(inst)
-            inst.update_from_json(build)
+            else:
+                if not inst.complete:
+                    # update the instance
+                    inst.update()
 
     ####################################################################################################################
     #
     ####################################################################################################################
-    def update(self, check_active_builds=True):
-        builds_filter = FilterList()\
-            .begin_filter('builds')\
-                .with_lower_bound(0)\
-                .with_upper_bound(self.max_history)\
-                .with_child('building')\
-                .with_child('duration')\
-                .with_child('result')\
-                .with_child('number')\
-                .with_child('queueId')
-
-        self.from_response(self.communicator.get(self.urls.job_build_info(self.name, builds_filter)))
+    def update(self):
+        self.from_response(self.api.job_api.info(job_name=self.name, filter=self.builds_filter, depth=1))
 
     ####################################################################################################################
     #
@@ -88,7 +101,7 @@ class Job:
     def spawn_instance(self, params:dict={}, status_callback:Callable[[JobInstance], None]=None) -> JobInstance:
 
         # request to start the job
-        resp:Response = self.communicator.post(self.urls.start_job(self.name, params=params))
+        resp:Response = self.api.job_api.build(self.name, params=params)
 
         # we failed
         if resp.status_code != 201:
@@ -100,7 +113,7 @@ class Job:
 
         # create the job_instance object
         job_instance = JobInstance(
-            communicator=self.communicator,
+            api=self.api,
             job_name=self.name,
             queue_id=queue_id
         )
@@ -113,29 +126,10 @@ class Job:
     ####################################################################################################################
     #
     ####################################################################################################################
-    def has_instance(self, build_id:int=None, queue_id:int=None) -> bool:
-        instance:JobInstance = None
-
-        if build_id is not None:
-            instance = any(x for x in self.instances if x.build_id == build_id)
-
-        if instance is not None:
-            return True
-        if instance is None and queue_id is not None:
-            instance = any(x for x in self.instances if x.queue_id == queue_id)
-
-        return instance is not None
-
-    ####################################################################################################################
-    #
-    ####################################################################################################################
     def find_instance(self, build_id:int=None, queue_id:int=None) -> JobInstance:
-        instance:JobInstance = None
-
-        if build_id is not None:
-            instance = next((x for x in self.instances if x.build_id == build_id), instance)
-
-        if instance is None and queue_id is not None:
-            instance = next((x for x in self.instances if x.queue_id == queue_id), instance)
-
-        return instance
+        return next(
+            (x for x in self.instances if (
+                (build_id is not None and x.build_id == build_id) or (queue_id is not None and x.queue_id == queue_id))
+            ),
+            None
+        )

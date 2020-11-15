@@ -1,43 +1,32 @@
 ########################################################################################################################
 #
 ########################################################################################################################
-from jenkinsexceptions import InvalidResponse
-from jenkinscommunicator import JenkinsCommunicator
-from requests.models import Response
+from requests.models        import Response
+from network.communicator   import Communicator
+from api.treeapi            import TreeAPI
+from .tree.filterlist       import FilterList
 
 ########################################################################################################################
 #
 ########################################################################################################################
-class JenkinsQueue:
+class QueueAPI(TreeAPI):
 
     ####################################################################################################################
     #
     ####################################################################################################################
-    def __init__(self, communicator:JenkinsCommunicator):
-        self.communicator   = communicator
-        self.urls           = communicator.url_helper
-
-        self.discoverable_items = []
-        self.items = []
+    def __init__(self, url_base:str, communicator:Communicator):
+        super().__init__(url_base=url_base, communicator=communicator)
+        self.info_extension         = f'/queue{self.format}'
+        self.item_info_extension    = f'/queue/item/{{}}{self.format}'
 
     ####################################################################################################################
     #
     ####################################################################################################################
-    def update(self):
-        try:
-            self.from_reponse(self.communicator.get(self.urls.queue_info))
-        except InvalidResponse:
-            pass
+    def info(self, **kwargs) -> Response:
+        return super().info(self.info_extension, **kwargs)
 
     ####################################################################################################################
     #
     ####################################################################################################################
-    def from_reponse(self, response:Response):
-
-        if response.status_code != 200:
-            raise InvalidResponse("Invalid Response")
-
-        data = response.json()
-
-        # save off any items in the queue
-        self.items = data['items']
+    def item_info(self, queue_id:int, **kwargs) -> Response:
+        return super().info(self.item_info_extension.format(queue_id), **kwargs)

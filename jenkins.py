@@ -1,21 +1,21 @@
 ########################################################################################################################
 #
 ########################################################################################################################
-import  argparse
-from jenkinsexceptions import InvalidResponse
-from jenkinsqueue import JenkinsQueue
-from jobinstance import JobInstance
-from    jenkinscommunicator import JenkinsCommunicator
-from    job import Job
-import  json
-from    logging import log
 
-from    requests.adapters import Response
-from    typing import Callable
-import  requests
+from api.tree.filterlist import FilterList
+from    api.jenkinsapi          import JenkinsAPI
+
+import  argparse
+from    exceptions              import InvalidResponse
+from    jobinstance             import JobInstance
+from    network.communicator    import Communicator
+from    job                     import Job
+
+from    requests.models         import Response
 import  sys
-from    threading import Thread
+from    threading               import Thread
 import  time
+from    typing                  import Callable
 
 import  logging
 logging.basicConfig()
@@ -40,43 +40,43 @@ class Jenkins:
     ####################################################################################################################
     #
     ####################################################################################################################
-    def __init__(self, server:str, username:str, password:str):
+    def __init__(self, url_base:str, username:str, password:str):
 
-        self.communicator = JenkinsCommunicator(
-            server=server,
-            username=username,
-            password=password
+        # Create the communicator
+        self.communicator = Communicator(username=username, password=password)
+
+        # create the api
+        self.api:JenkinsAPI = JenkinsAPI(
+            url_base=url_base,
+            communicator=self.communicator,
         )
 
-        self.queue = JenkinsQueue(
-            communicator=self.communicator
-        )
-
-        self.urls = self.communicator.url_helper
-
+        # list of jobs that we have
         self.jobs:dict[str, Job] = {}
 
+        # say that we have/have not initialize
         self.initialized = False
 
+        # our status thread
         self.status_thread:Thread       = Thread(target=self.__status_thread_entry, name='StatusThread')
         self.status_thread_exit:bool    = False
         self.status_thread.start()
-
-
 
     ####################################################################################################################
     #
     ####################################################################################################################
     def __status_thread_entry(self):
 
-        while not self.status_thread_exit:
+        # set the crumbs
+        self.communicator.set_crumbs(*self.api.crumb_api.crumb())
 
-            # update the queue information
-            self.queue.update()
+        while not self.status_thread_exit:
 
             # get jobs from the server and create as necessary
             try:
-                self.__jobs_from_response(self.communicator.get(self.urls.base_api))
+                self.__jobs_from_response(
+                    response=self.api.host_api.info(filter=FilterList().begin_filter('jobs').with_filter('name'))
+                )
             except InvalidResponse:
                 pass
 
@@ -101,8 +101,8 @@ class Jenkins:
         job_names = [x['name'] for x in data['jobs']]
 
         # figure out what to add and remove from jobs dict
-        jobs_to_add = list(set(job_names).difference(set(self.jobs.keys())))
-        jobs_to_remove = list(set(self.jobs.keys()).difference(set(job_names)))
+        jobs_to_add     = list(set(job_names).difference(set(self.jobs.keys())))
+        jobs_to_remove  = list(set(self.jobs.keys()).difference(set(job_names)))
 
         for job in jobs_to_remove:
             del self.jobs[job]
@@ -111,8 +111,7 @@ class Jenkins:
             # add the job to the queue
             self.jobs[job] = Job(
                 name=job,
-                communicator=self.communicator,
-                queue=self.queue
+                api=self.api
             )
 
     ####################################################################################################################
@@ -127,8 +126,7 @@ class Jenkins:
         # create an instance
         job:Job = Job(
             name=job_name,
-            communicator=self.communicator,
-            queue=self.queue
+            api=self.api
         )
 
         # add to the jobs dict
@@ -143,8 +141,6 @@ class Jenkins:
         if self.status_thread:
             self.status_thread_exit = True
             self.status_thread.join()
-
-        self.communicator.stop()
 
     ####################################################################################################################
     #
@@ -173,6 +169,13 @@ class Jenkins:
         # spawn an instance of the job
         return job.spawn_instance(params, status_callback)
 
+    ####################################################################################################################
+    #
+    ####################################################################################################################
+    def job_list(self) -> list[str]:
+        return [x.name for x in self.jobs]
+
+
 ########################################################################################################################
 #
 ########################################################################################################################
@@ -195,7 +198,7 @@ def main(args=sys.argv[1:]):
     args = parser.parse_args(args)
 
     jenkins = Jenkins(
-        server=args.server,
+        url_base=args.server,
         username=args.user,
         password=args.password
     )
@@ -224,6 +227,7 @@ def main(args=sys.argv[1:]):
         )
 
         while not job.complete:
+            print ("Waiting for job completeion")
             time.sleep(1)
 
     elif args.stop_job is not None:
