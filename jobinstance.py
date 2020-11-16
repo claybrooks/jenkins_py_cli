@@ -23,19 +23,18 @@ class JobInstance:
         if build_id is None and queue_id is None:
             raise JobInstanceConstructException("One of build_id and queue_id must be specified")
 
-        self.api        = api
+        self.api = api
 
-        self.build_id   = build_id
-        self.queue_id   = queue_id
-        self.name       = job_name
-        self.complete   = False
+        self.build_id       = build_id
+        self.queue_id       = queue_id
+        self.name           = job_name
+        self.duration_in_ms = -1
+        self.complete       = False
+        self.in_queue       = False
+        self.building       = False
 
-        self.info = {
-            'build_id': build_id,
-            'queue_id': queue_id,
-            'name':     job_name,
-            'complete': self.complete,
-        }
+        self.info:dict = {}
+        self.__update_info()
 
         self.update_listeners:list[Callable[[JobInstance], None]] = []
 
@@ -56,6 +55,18 @@ class JobInstance:
             .with_filter('number')\
             .with_filter('queueId')\
             .with_filter('result')
+
+    ####################################################################################################################
+    #
+    ####################################################################################################################
+    def __update_info(self):
+        self.info['build_id'] = self.build_id
+        self.info['queue_id'] = self.queue_id
+        self.info['name']     = self.name
+        self.info['complete'] = self.complete
+        self.info['in_queue'] = self.in_queue
+        self.info['building'] = self.building
+        self.info['duration'] = self.duration_in_ms
 
     ####################################################################################################################
     #
@@ -112,6 +123,8 @@ class JobInstance:
         self.duration   = json['duration']
         self.result     = json['result']
 
+        self.__update_info()
+
     ####################################################################################################################
     #
     ####################################################################################################################
@@ -146,9 +159,17 @@ class JobInstance:
 
         data = response.json()
 
-        self.complete       = not data['building']
-        self.duration_in_ms = data['duration']
-        self.result         = data['result']
+        if not self.complete:
+            self.building       = data['building']
+            self.complete       = not self.building
+            self.duration_in_ms = data['duration']
+            self.result         = data['result']
+
+            self.__update_info()
+
+            if self.complete:
+                for c in self.update_listeners:
+                    c(self)
 
     ####################################################################################################################
     #
@@ -160,9 +181,23 @@ class JobInstance:
         data = response.json()
 
         # this thing is no longer in the queue
-        if 'why' in data and data['why'] is None and 'executable' in data:
-            self.build_id = int(data['executable']['number'])
-            self.in_queue = False
+        if self.in_queue:
+            if 'why' in data and data['why'] is None and 'executable' in data:
+                self.build_id = int(data['executable']['number'])
+                self.in_queue = False
+
+                self.__update_info()
+
+                for c in self.update_listeners:
+                    c(self)
+
+        elif not self.in_queue:
+            self.in_queue = True
+
+            self.__update_info()
+
+            for c in self.update_listeners:
+                c(self)
 
     ####################################################################################################################
     #

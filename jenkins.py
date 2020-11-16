@@ -57,6 +57,8 @@ class Jenkins:
         # say that we have/have not initialize
         self.initialized = False
 
+        self.job_change_listeners:list[Callable[[Job, bool]]] = []
+
         # our status thread
         self.status_thread:Thread       = Thread(target=self.__status_thread_entry, name='StatusThread')
         self.status_thread_exit:bool    = False
@@ -86,7 +88,7 @@ class Jenkins:
             if not self.initialized:
                 self.initialized = True
 
-            time.sleep(1)
+            time.sleep(.25)
 
     ####################################################################################################################
     #
@@ -105,6 +107,8 @@ class Jenkins:
         jobs_to_remove  = list(set(self.jobs.keys()).difference(set(job_names)))
 
         for job in jobs_to_remove:
+            for c in self.job_change_listeners:
+                c(job, False)
             del self.jobs[job]
 
         for job in jobs_to_add:
@@ -113,6 +117,8 @@ class Jenkins:
                 name=job,
                 api=self.api
             )
+            for c in self.job_change_listeners:
+                c(self.jobs[job], True)
 
     ####################################################################################################################
     #
@@ -175,6 +181,12 @@ class Jenkins:
     def job_list(self) -> list[str]:
         return [x.name for x in self.jobs]
 
+    ####################################################################################################################
+    #
+    ####################################################################################################################
+    def register_job_change(self, callback:Callable[[Job, bool], None]):
+        self.job_change_listeners.append(callback)
+
 
 ########################################################################################################################
 #
@@ -226,8 +238,9 @@ def main(args=sys.argv[1:]):
             status_callback=lambda f: print ("hello")
         )
 
+        job.register_status_update(lambda j: print (f"{j.name} was updated: {j.info}"))
+
         while not job.complete:
-            print ("Waiting for job completeion")
             time.sleep(1)
 
     elif args.stop_job is not None:
