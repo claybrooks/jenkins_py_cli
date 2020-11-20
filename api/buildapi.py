@@ -46,4 +46,4 @@ class BuildAPI(TreeAPI):
     #
     ####################################################################################################################
     def info(self, job_name:str, build_id:int, **kwargs) -> Response:
-        return super().info(self.info_extension.format(job_name, build_id), **kwargs)
+        return self.get(self.info_extension.format(job_name, build_id), **kwargs)

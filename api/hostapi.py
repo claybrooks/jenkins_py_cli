@@ -19,5 +19,5 @@ class HostAPI(TreeAPI):
     #
     ####################################################################################################################
     def info(self, **kwargs) -> Response:
-        return super().info(self.format, **kwargs)
+        return self.get(self.format, **kwargs)
 

@@ -29,16 +29,16 @@ class JobAPI(TreeAPI):
         if params != {}:
             return self.build_with_parameters(job_name=job_name, params=params)
         else:
-            return super().post(self.build_extension.format(job_name))
+            return self.post(self.build_extension.format(job_name))
 
     ####################################################################################################################
     #
     ####################################################################################################################
     def build_with_parameters(self, job_name:str, params:dict) -> Response:
-        return super().post(self.parameter_build_extension.format(job_name), params=params)
+        return self.post(self.parameter_build_extension.format(job_name), params=params)
 
     ####################################################################################################################
     #
     ####################################################################################################################
     def info(self, job_name:str, **kwargs) -> Response:
-        return super().info(self.info_extension.format(job_name), **kwargs)
+        return self.get(self.info_extension.format(job_name), **kwargs)

@@ -16,17 +16,31 @@ class Communicator:
     ####################################################################################################################
     #
     ####################################################################################################################
-    def __init__(self, username:str, password:str):
+    def __init__(self, username:str, password:str=None, api_token:str=None, api_token_file:str=None):
 
-        # auth
-        self.auth:HTTPBasicAuth = HTTPBasicAuth(username=username, password=password)
+        # user gave password directly, just use it
+        if password:
+            pass
+        # use the api token just like a password
+        elif api_token:
+            password=api_token
+        # read the first line in the file and use like an api token
+        elif api_token_file:
+            with open(api_token_file, 'r') as f:
+                password=f.readline().strip()
+        # nothing was given to us, raise
+        else:
+            raise Exception("Not authentication provided")
+
+        # auth used
+        self.auth = HTTPBasicAuth(username=username, password=password)
 
         # hold the session so our crumbs don't reset
         self.session:requests.Session = requests.Session()
 
         # data from crumbapi
-        self.crumb:str = None
-        self.crumb_request_field:str = None
+        self.crumb:str                  = None
+        self.crumb_request_field:str    = None
 
     ####################################################################################################################
     #

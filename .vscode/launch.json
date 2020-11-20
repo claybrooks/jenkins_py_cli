@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Jenkins",
             "type": "python",
@@ -26,7 +27,8 @@
                 "--server", "http://localhost:8080",
                 "--user", "clay",
                 "--password", "Cb052192",
-                "--list-jobs"
+                "job",
+                "--list"
             ]
         },
         {
@@ -39,7 +41,8 @@
                 "--server", "http://localhost:8080",
                 "--user", "clay",
                 "--password", "Cb052192",
-                "--start-job", "HelloWorld"
+                "job",
+                "--start", "HelloWorld"
             ]
         },
         {
@@ -52,8 +55,9 @@
                 "--server", "http://localhost:8080",
                 "--user", "clay",
                 "--password", "Cb052192",
-                "--start-job", "HelloWorldParam",
-                "--job-param", "PARAM=HELLOWORLD"
+                "job",
+                "--start", "HelloWorldParam",
+                "--param", "PARAM=HELLOWORLD"
             ]
         },
         {
@@ -66,9 +70,10 @@
                 "--server", "http://localhost:8080",
                 "--user", "clay",
                 "--password", "Cb052192",
-                "--start-job", "HelloWorldParam",
-                "--job-param", "PARAM=HELLOWORLD",
-                "--wait-for-job-start"
+                "job",
+                "--start", "HelloWorldParam",
+                "--param", "PARAM=HELLOWORLD",
+                "--wait-for-start"
             ]
         },
         {
@@ -81,9 +86,38 @@
                 "--server", "http://localhost:8080",
                 "--user", "clay",
                 "--password", "Cb052192",
-                "--start-job", "HelloWorldParam",
-                "--job-param", "PARAM=HELLOWORLD",
-                "--wait-for-job-completion",
+                "job",
+                "--start", "HelloWorldParam",
+                "--param", "PARAM=HELLOWORLD",
+                "--wait-for-completion",
+            ]
+        },
+        {
+            "name": "Jenkins: Get API Token",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--password", "Cb052192",
+                "user",
+                "--get-api-token"
+            ]
+        },
+        {
+            "name": "Jenkins: API Token Job",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/jenkins.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server", "http://localhost:8080",
+                "--user", "clay",
+                "--api-token", "11f3594526850eb900bd39d87be752c48f",
+                "job",
+                "--start", "HelloWorld"
             ]
         }
     ]

@@ -22,7 +22,7 @@ class CrumbAPI(HostAPI):
     #
     ####################################################################################################################
     def crumb(self) -> tuple[str,str]:
-        resp:Response = super().get(self.crumb_extension)
+        resp:Response = self.get(self.crumb_extension)
 
         if resp.status_code != 200:
             return (None, None)

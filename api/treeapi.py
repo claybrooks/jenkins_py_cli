@@ -22,17 +22,14 @@ class TreeAPI(API):
     ####################################################################################################################
     #
     ####################################################################################################################
-    def get(self, url:str, params:dict[str,str]={}, filter:FilterList=None) -> Response:
+    def get(self, url:str, params:dict[str,str]={}, filter:FilterList=None, depth=0) -> Response:
+
+        local_params = dict(params)
+
+        local_params['depth'] = depth
 
         # apply tree filter if any
         if filter:
-            params['tree'] = f'{str(filter)}'
+            local_params['tree'] = f'{str(filter)}'
 
-        return super().get(url, params=params)
-
-    ####################################################################################################################
-    #
-    ####################################################################################################################
-    def info(self, url:str, depth:int=0, params:dict[str,str]={}, filter:FilterList=None) -> Response:
-        params['depth'] = depth
-        return self.get(url, params=params, filter=filter)
+        return super().get(url, params=local_params)

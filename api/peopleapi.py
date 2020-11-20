@@ -4,29 +4,37 @@
 from requests.models        import Response
 from network.communicator   import Communicator
 from api.treeapi            import TreeAPI
-from .tree.filterlist       import FilterList
+
 
 ########################################################################################################################
 #
 ########################################################################################################################
-class QueueAPI(TreeAPI):
+class PeopleAPI(TreeAPI):
 
     ####################################################################################################################
     #
     ####################################################################################################################
     def __init__(self, url_base:str, communicator:Communicator):
         super().__init__(url_base=url_base, communicator=communicator)
-        self.info_extension         = f'/queue{self.format}'
-        self.item_info_extension    = f'/queue/item/{{}}{self.format}'
+
+        self.info_extension = '/asynchPeople' + self.format
+        self.user_extension = '/user/{0}' + self.format
+        self.user_configure_extension = '/user/{0}/configure'
+
+    ####################################################################################################################
+    #
+    ####################################################################################################################
+    def user_info(self, username:str, **kwargs) -> Response:
+        return self.get(self.user_extension.format(username), **kwargs)
+
+    ####################################################################################################################
+    #
+    ####################################################################################################################
+    def user_configure(self, username:str, **kwargs) -> Response:
+        return self.get(self.user_configure_extension.format(username), **kwargs)
 
     ####################################################################################################################
     #
     ####################################################################################################################
     def info(self, **kwargs) -> Response:
         return self.get(self.info_extension, **kwargs)
-
-    ####################################################################################################################
-    #
-    ####################################################################################################################
-    def item_info(self, queue_id:int, **kwargs) -> Response:
-        return  self.get(self.item_info_extension.format(queue_id), **kwargs)

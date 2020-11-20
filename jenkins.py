@@ -40,10 +40,15 @@ class Jenkins:
     ####################################################################################################################
     #
     ####################################################################################################################
-    def __init__(self, url_base:str, username:str, password:str):
+    def __init__(self, url_base:str, username:str, password:str=None, api_token:str=None, api_token_file:str=None):
 
         # Create the communicator
-        self.communicator = Communicator(username=username, password=password)
+        self.communicator = Communicator(
+            username=username,
+            password=password,
+            api_token=api_token,
+            api_token_file=api_token_file
+        )
 
         # create the api
         self.api:JenkinsAPI = JenkinsAPI(
@@ -187,6 +192,13 @@ class Jenkins:
     def register_job_change(self, callback:Callable[[Job, bool], None]):
         self.job_change_listeners.append(callback)
 
+    ####################################################################################################################
+    #
+    ####################################################################################################################
+    def get_user_token(self, user:str):
+        resp = self.api.people_api.user_configure(username=user)
+        i = 0
+
 
 ########################################################################################################################
 #
@@ -196,23 +208,36 @@ def main(args=sys.argv[1:]):
 
     parser.add_argument('--server',                     action='store')
     parser.add_argument('--user',                       action='store')
-    parser.add_argument('--password',                   action='store')
 
-    parser.add_argument('--list-jobs',                  action='store_true',    default=False)
-    parser.add_argument('--list-running-jobs',          action='store_true',    default=False)
-    parser.add_argument('--job-info',                   action='store',         default=None)
-    parser.add_argument('--start-job',                  action='store',         default=None)
-    parser.add_argument('--stop-job',                   action='store',         default=None)
-    parser.add_argument('--job-param',                  action='append',        default=[])
-    parser.add_argument('--wait-for-job-start',         action='store_true',    default=False)
-    parser.add_argument('--wait-for-job-completion',    action='store_true',    default=False)
+    subparsers = parser.add_subparsers(title="command", dest='command')
+
+    auth_group = parser.add_mutually_exclusive_group(required=True)
+    auth_group.add_argument('--password',       action='store')
+    auth_group.add_argument('--api-token',      action='store')
+    auth_group.add_argument('--api-token-file', action='store')
+
+    job_parser = subparsers.add_parser(name="job")
+    user_parser= subparsers.add_parser(name="user")
+
+    job_parser.add_argument('--list',                   action='store_true',    default=False)
+    job_parser.add_argument('--list-running',           action='store_true',    default=False)
+    job_parser.add_argument('--info',                   action='store',         default=None)
+    job_parser.add_argument('--start',                  action='store',         default=None)
+    job_parser.add_argument('--stop',                   action='store',         default=None)
+    job_parser.add_argument('--param',                  action='append',        default=[])
+    job_parser.add_argument('--wait-for-start',         action='store_true',    default=False)
+    job_parser.add_argument('--wait-for-completion',    action='store_true',    default=False)
+
+    user_parser.add_argument('--get-api-token', action='store_true', default=False)
 
     args = parser.parse_args(args)
 
     jenkins = Jenkins(
         url_base=args.server,
         username=args.user,
-        password=args.password
+        password=args.password,
+        api_token=args.api_token,
+        api_token_file=args.api_token_file
     )
 
     while not jenkins.initialized:
@@ -220,34 +245,38 @@ def main(args=sys.argv[1:]):
 
     wait_for_thread_signal = False
 
-    if args.list_jobs:
-        jobs = jenkins.get_jobs()
-        print (', '.join(jobs))
+    if args.command == 'job':
+        if args.list:
+            jobs = jenkins.get_jobs()
+            print (', '.join(jobs))
 
-    elif args.list_running_jobs:
-        running_jobs = jenkins.get_running_jobs()
-        print (', '.join(running_jobs))
+        elif args.list_running:
+            running_jobs = jenkins.get_running_jobs()
+            print (', '.join(running_jobs))
 
-    elif args.job_info:
-        jenkins.job_info(args.job_info)
+        elif args.info:
+            jenkins.job_info(args.job_info)
 
-    elif args.start_job is not None:
-        job = jenkins.start_job_instance(
-            args.start_job,
-            job_params_kvp=args.job_param,
-            status_callback=lambda f: print ("hello")
-        )
+        elif args.start is not None:
+            job = jenkins.start_job_instance(
+                args.start,
+                job_params_kvp=args.param,
+                status_callback=lambda f: print ("hello")
+            )
 
-        job.register_status_update(lambda j: print (f"{j.name} was updated: {j.info}"))
+            job.register_status_update(lambda j: print (f"{j.name} was updated: {j.info}"))
 
-        while not job.complete:
-            time.sleep(1)
+            while not job.complete:
+                time.sleep(1)
 
-    elif args.stop_job is not None:
-        jenkins.stop_job(args.stop_job)
+        elif args.stop is not None:
+            jenkins.stop_job(args.stop)
 
-    while wait_for_thread_signal:
-        pass
+        while wait_for_thread_signal:
+            pass
+    elif args.user:
+        if args.get_api_token:
+            print (jenkins.get_user_token(args.user))
     jenkins.stop()
 
 ########################################################################################################################
